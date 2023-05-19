@@ -1,0 +1,51 @@
+import KratosMultiphysics as Kratos
+import KratosMultiphysics.SolidMechanicsApplication as SolidMechanics
+import KratosMultiphysics.FluidDynamicsApplication as FluidDynamics
+import KratosMultiphysics.MultiScaleApplication as MultiScale
+
+# Define the Kratos Model
+model = Kratos.Model()
+
+# Define the fluid solver settings
+fluid_solver = FluidDynamics.EulerianFluidSolver(model)
+fluid_solver.settings.AddEmptyValue("problem_data")
+fluid_solver.settings["problem_data"]["domain_size"].Set(3)  # 3D simulation
+fluid_solver.settings["solver_type"].Set("vms")  # Variational multiscale formulation
+# Add other fluid solver settings as needed
+
+# Define the solid solver settings
+solid_solver = SolidMechanics.StructuralMechanicsSolver(model)
+solid_solver.settings.AddEmptyValue("problem_data")
+solid_solver.settings["problem_data"]["domain_size"].Set(3)  # 3D simulation
+solid_solver.settings["linear_solver_settings"]["solver_type"].Set("SparseLU")  # Linear solver type
+# Add other solid solver settings as needed
+
+# Define the multiscale coupling settings
+multiscale_coupling_settings = MultiScale.MultiscaleCouplingSettings(model)
+multiscale_coupling_settings.settings["fluid_solver_settings"].SetFluidSolverSettings(fluid_solver.settings)
+multiscale_coupling_settings.settings["solid_solver_settings"].SetSolidSolverSettings(solid_solver.settings)
+# Add other multiscale coupling settings as needed
+
+# Set the material properties of the polypropylene blend
+polypropylene_properties = model.CreateModelPart("PolypropyleneProperties")
+# Set material properties such as density, viscosity, thermal conductivity, etc.
+# Add other material properties as needed
+
+# Set the properties of the dripping and melting behavior
+dripping_melting_properties = model.CreateModelPart("DrippingMeltingProperties")
+# Set properties such as melting point, latent heat of fusion, viscosity change with temperature, etc.
+# Add other properties as needed
+
+# Assign the material properties to the fluid and solid domains
+fluid_solver.AssignMaterialProperties(polypropylene_properties)
+solid_solver.AssignMaterialProperties(polypropylene_properties)
+
+# Assign the dripping and melting behavior properties to the multiscale coupling settings
+multiscale_coupling_settings.settings["dripping_melting_properties"].SetDrippingMeltingProperties(dripping_melting_properties)
+
+# Solve the coupled fluid-structure problem
+multiscale_coupling_solver = MultiScale.MultiscaleCouplingSolver(model)
+multiscale_coupling_solver.Initialize()
+multiscale_coupling_solver.Solve()
+
+# Access and post-process results as needed
